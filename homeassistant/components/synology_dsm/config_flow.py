@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from contextlib import suppress
 from ipaddress import ip_address as ip
 import logging
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
 
 from synology_dsm import SynologyDSM
+from synology_dsm.api.file_station.models import SynoFileSharedFolder
 from synology_dsm.exceptions import (
     SynologyDSMException,
     SynologyDSMLogin2SAFailedException,
@@ -41,13 +43,22 @@ from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 from homeassistant.helpers.typing import DiscoveryInfoType, VolDictType
 from homeassistant.util.network import is_ip_address as is_ip
 
 from .const import (
+    CONF_BACKUP_PATH,
+    CONF_BACKUP_SHARE,
     CONF_DEVICE_TOKEN,
     CONF_SNAPSHOT_QUALITY,
     CONF_VOLUMES,
+    DEFAULT_BACKUP_PATH,
     DEFAULT_PORT,
     DEFAULT_PORT_SSL,
     DEFAULT_SCAN_INTERVAL,
@@ -56,6 +67,7 @@ from .const import (
     DEFAULT_USE_SSL,
     DEFAULT_VERIFY_SSL,
     DOMAIN,
+    SYNOLOGY_CONNECTION_EXCEPTIONS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -126,6 +138,7 @@ class SynologyDSMFlowHandler(ConfigFlow, domain=DOMAIN):
         self.discovered_conf: dict[str, Any] = {}
         self.reauth_conf: Mapping[str, Any] = {}
         self.reauth_reason: str | None = None
+        self.shares: list[SynoFileSharedFolder] | None = None
 
     def _show_form(
         self,
@@ -168,6 +181,8 @@ class SynologyDSMFlowHandler(ConfigFlow, domain=DOMAIN):
         verify_ssl = user_input.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL)
         otp_code = user_input.get(CONF_OTP_CODE)
         friendly_name = user_input.get(CONF_NAME)
+        backup_path = user_input.get(CONF_BACKUP_PATH)
+        backup_share = user_input.get(CONF_BACKUP_SHARE)
 
         if not port:
             if use_ssl is True:
@@ -204,6 +219,12 @@ class SynologyDSMFlowHandler(ConfigFlow, domain=DOMAIN):
         if errors:
             return self._show_form(step_id, user_input, errors)
 
+        with suppress(*SYNOLOGY_CONNECTION_EXCEPTIONS):
+            self.shares = await api.file.get_shared_folders(only_writable=True)
+
+        if self.shares and not backup_path:
+            return await self.async_step_backup_share(user_input)
+
         # unique_id should be serial for services purpose
         existing_entry = await self.async_set_unique_id(serial, raise_on_progress=False)
 
@@ -215,6 +236,8 @@ class SynologyDSMFlowHandler(ConfigFlow, domain=DOMAIN):
             CONF_USERNAME: username,
             CONF_PASSWORD: password,
             CONF_MAC: api.network.macs,
+            CONF_BACKUP_PATH: backup_path,
+            CONF_BACKUP_SHARE: backup_share,
         }
         if otp_code:
             config_data[CONF_DEVICE_TOKEN] = api.device_token
@@ -356,6 +379,43 @@ class SynologyDSMFlowHandler(ConfigFlow, domain=DOMAIN):
                 step_id="2sa",
                 data_schema=vol.Schema({vol.Required(CONF_OTP_CODE): str}),
                 errors=errors or {},
+            )
+
+        user_input = {**self.saved_user_input, **user_input}
+        self.saved_user_input = {}
+
+        return await self.async_step_user(user_input)
+
+    async def async_step_backup_share(
+        self, user_input: dict[str, Any], errors: dict[str, str] | None = None
+    ) -> ConfigFlowResult:
+        """Select backup location."""
+        if TYPE_CHECKING:
+            assert self.shares is not None
+
+        if not self.saved_user_input:
+            self.saved_user_input = user_input
+
+        if CONF_BACKUP_PATH not in user_input and CONF_BACKUP_SHARE not in user_input:
+            return self.async_show_form(
+                step_id="backup_share",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(CONF_BACKUP_SHARE): SelectSelector(
+                            SelectSelectorConfig(
+                                options=[
+                                    SelectOptionDict(value=s.path, label=s.name)
+                                    for s in self.shares
+                                ],
+                                mode=SelectSelectorMode.DROPDOWN,
+                            ),
+                        ),
+                        vol.Required(
+                            CONF_BACKUP_PATH,
+                            default=DEFAULT_BACKUP_PATH,
+                        ): str,
+                    }
+                ),
             )
 
         user_input = {**self.saved_user_input, **user_input}
