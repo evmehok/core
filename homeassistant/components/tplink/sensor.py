@@ -118,6 +118,41 @@ SENSOR_DESCRIPTIONS: tuple[TPLinkSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
+    # Vacuum cleaning records
+    TPLinkSensorEntityDescription(
+        key="clean_time",
+        device_class=SensorDeviceClass.DURATION,
+    ),
+    TPLinkSensorEntityDescription(
+        key="clean_area",
+        device_class=SensorDeviceClass.AREA,
+    ),
+    TPLinkSensorEntityDescription(
+        key="clean_progress",
+    ),
+    TPLinkSensorEntityDescription(
+        key="last_clean_time",
+        device_class=SensorDeviceClass.DURATION,
+    ),
+    TPLinkSensorEntityDescription(
+        key="last_clean_area",
+        device_class=SensorDeviceClass.AREA,
+    ),
+    TPLinkSensorEntityDescription(
+        key="last_clean_timestamp",
+        device_class=SensorDeviceClass.TIMESTAMP,
+    ),
+    TPLinkSensorEntityDescription(
+        key="total_clean_time",
+        device_class=SensorDeviceClass.DURATION,
+    ),
+    TPLinkSensorEntityDescription(
+        key="total_clean_area",
+        device_class=SensorDeviceClass.AREA,
+    ),
+    TPLinkSensorEntityDescription(
+        key="total_clean_count",
+    ),
 )
 
 SENSOR_DESCRIPTIONS_MAP = {desc.key: desc for desc in SENSOR_DESCRIPTIONS}
