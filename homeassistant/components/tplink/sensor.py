@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from kasa import Feature
 
@@ -14,6 +15,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -28,6 +30,9 @@ class TPLinkSensorEntityDescription(
     SensorEntityDescription, TPLinkFeatureEntityDescription
 ):
     """Base class for a TPLink feature based sensor entity description."""
+
+    #: Optional callable to convert the value
+    convert_fn: Callable[[Any], Any] | None = None
 
 
 SENSOR_DESCRIPTIONS: tuple[TPLinkSensorEntityDescription, ...] = (
@@ -122,6 +127,8 @@ SENSOR_DESCRIPTIONS: tuple[TPLinkSensorEntityDescription, ...] = (
     TPLinkSensorEntityDescription(
         key="clean_time",
         device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        convert_fn=lambda x: x.total_seconds() / 60,
     ),
     TPLinkSensorEntityDescription(
         key="clean_area",
@@ -133,6 +140,8 @@ SENSOR_DESCRIPTIONS: tuple[TPLinkSensorEntityDescription, ...] = (
     TPLinkSensorEntityDescription(
         key="last_clean_time",
         device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        convert_fn=lambda x: x.total_seconds() / 60,
     ),
     TPLinkSensorEntityDescription(
         key="last_clean_area",
@@ -145,6 +154,8 @@ SENSOR_DESCRIPTIONS: tuple[TPLinkSensorEntityDescription, ...] = (
     TPLinkSensorEntityDescription(
         key="total_clean_time",
         device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        convert_fn=lambda x: x.total_seconds() / 60,
     ),
     TPLinkSensorEntityDescription(
         key="total_clean_area",
@@ -195,6 +206,9 @@ class TPLinkSensorEntity(CoordinatedTPLinkFeatureEntity, SensorEntity):
             value = round(cast(float, value), self._feature.precision_hint)
             # We probably do not need this, when we are rounding already?
             self._attr_suggested_display_precision = self._feature.precision_hint
+
+        if self.entity_description.convert_fn:
+            value = self.entity_description.convert_fn(value)
 
         if TYPE_CHECKING:
             # pylint: disable-next=import-outside-toplevel
