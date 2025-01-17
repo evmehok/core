@@ -134,14 +134,15 @@ jobs:
         abi: ["cp312", "cp313"]
         arch: ${{ fromJson(needs.init.outputs.architectures) }}
         include:
+          # Default value
+          - os: ubuntu-latest
+
           - arch: aarch64
             os: ubuntu-24.04-arm
           - arch: armhf
             os: ubuntu-24.04-arm
           - arch: armv7
             os: ubuntu-24.04-arm
-          # Default value
-          - os: ubuntu-latest
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4.2.2
@@ -192,14 +193,15 @@ jobs:
         abi: ["cp312", "cp313"]
         arch: ${{ fromJson(needs.init.outputs.architectures) }}
         include:
+          # Default value
+          - os: ubuntu-latest
+
           - arch: aarch64
             os: ubuntu-24.04-arm
           - arch: armhf
             os: ubuntu-24.04-arm
           - arch: armv7
             os: ubuntu-24.04-arm
-          # Default value
-          - os: ubuntu-latest
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4.2.2
