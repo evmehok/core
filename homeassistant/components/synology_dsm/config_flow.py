@@ -20,7 +20,6 @@ from synology_dsm.exceptions import (
 )
 import voluptuous as vol
 
-from homeassistant.components import ssdp, zeroconf
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -49,6 +48,12 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
 )
+from homeassistant.helpers.service_info.ssdp import (
+    ATTR_UPNP_FRIENDLY_NAME,
+    ATTR_UPNP_SERIAL,
+    SsdpServiceInfo,
+)
+from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from homeassistant.helpers.typing import DiscoveryInfoType, VolDictType
 from homeassistant.util.network import is_ip_address as is_ip
 
@@ -271,7 +276,7 @@ class SynologyDSMFlowHandler(ConfigFlow, domain=DOMAIN):
         return await self.async_validate_input_create_entry(user_input, step_id=step)
 
     async def async_step_zeroconf(
-        self, discovery_info: zeroconf.ZeroconfServiceInfo
+        self, discovery_info: ZeroconfServiceInfo
     ) -> ConfigFlowResult:
         """Handle a discovered synology_dsm via zeroconf."""
         discovered_macs = [
@@ -286,13 +291,13 @@ class SynologyDSMFlowHandler(ConfigFlow, domain=DOMAIN):
         return await self._async_from_discovery(host, friendly_name, discovered_macs)
 
     async def async_step_ssdp(
-        self, discovery_info: ssdp.SsdpServiceInfo
+        self, discovery_info: SsdpServiceInfo
     ) -> ConfigFlowResult:
         """Handle a discovered synology_dsm via ssdp."""
         parsed_url = urlparse(discovery_info.ssdp_location)
-        upnp_friendly_name: str = discovery_info.upnp[ssdp.ATTR_UPNP_FRIENDLY_NAME]
+        upnp_friendly_name: str = discovery_info.upnp[ATTR_UPNP_FRIENDLY_NAME]
         friendly_name = upnp_friendly_name.split("(", 1)[0].strip()
-        mac_address = discovery_info.upnp[ssdp.ATTR_UPNP_SERIAL]
+        mac_address = discovery_info.upnp[ATTR_UPNP_SERIAL]
         discovered_macs = [format_synology_mac(mac_address)]
         # Synology NAS can broadcast on multiple IP addresses, since they can be connected to multiple ethernets.
         # The serial of the NAS is actually its MAC address.
