@@ -127,12 +127,21 @@ jobs:
     name: Build Core wheels ${{ matrix.abi }} for ${{ matrix.arch }} (musllinux_1_2)
     if: github.repository_owner == 'home-assistant'
     needs: init
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         abi: ["cp312", "cp313"]
         arch: ${{ fromJson(needs.init.outputs.architectures) }}
+        include:
+          - arch: aarch64
+            os: ubuntu-24.04-arm
+          - arch: armhf
+            os: ubuntu-24.04-arm
+          - arch: armv7
+            os: ubuntu-24.04-arm
+          # Default value
+          - os: ubuntu-latest
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4.2.2
@@ -176,12 +185,21 @@ jobs:
     name: Build wheels ${{ matrix.abi }} for ${{ matrix.arch }}
     if: github.repository_owner == 'home-assistant'
     needs: init
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         abi: ["cp312", "cp313"]
         arch: ${{ fromJson(needs.init.outputs.architectures) }}
+        include:
+          - arch: aarch64
+            os: ubuntu-24.04-arm
+          - arch: armhf
+            os: ubuntu-24.04-arm
+          - arch: armv7
+            os: ubuntu-24.04-arm
+          # Default value
+          - os: ubuntu-latest
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4.2.2
