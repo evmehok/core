@@ -1,6 +1,6 @@
 """The Backup integration."""
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.hassio import is_hassio
 from homeassistant.helpers.typing import ConfigType
@@ -48,6 +48,7 @@ __all__ = [
     "ManagerBackup",
     "NewBackup",
     "WrittenBackup",
+    "async_get_manager",
 ]
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
@@ -92,3 +93,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async_register_http_views(hass)
 
     return True
+
+
+@callback
+def async_get_manager(hass: HomeAssistant) -> BackupManager:
+    """Get the backup manager instance.
+
+    Raises KeyError if the backup integration is not available.
+    """
+    return hass.data[DATA_MANAGER]
