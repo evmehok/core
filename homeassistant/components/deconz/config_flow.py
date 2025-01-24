@@ -44,7 +44,7 @@ from .const import (
     HASSIO_CONFIGURATION_URL,
     LOGGER,
 )
-from .hub import DeconzHub
+from .hub import DeconzConfigEntry, DeconzHub
 
 DECONZ_MANUFACTURERURL = "http://www.dresden-elektronik.de"
 CONF_SERIAL = "serial"
@@ -54,9 +54,10 @@ CONF_MANUAL_INPUT = "Manually define gateway"
 @callback
 def get_master_hub(hass: HomeAssistant) -> DeconzHub:
     """Return the gateway which is marked as master."""
-    for hub in hass.data[DOMAIN].values():
-        if hub.master:
-            return cast(DeconzHub, hub)
+    entry: DeconzConfigEntry
+    for entry in hass.config_entries.async_loaded_entries(DOMAIN):
+        if (hub := entry.runtime_data).master:
+            return hub
     raise ValueError
 
 
